@@ -1,0 +1,214 @@
+---
+title: "PA1_template.Rmd"
+output: html_document
+---
+This is the report requested for the first peer assessment of the Reproducible Research course.
+
+As requested the file is called PA1_template.Rmd and the output is a html file.
+Further, the code used to generate the requested results will be always visible, as instructed, and the following chunk of code will set by default this condition.
+
+
+```{r setoptions, echo=TRUE}
+library("stringi")
+library("MASS")
+```
+
+
+
+
+## The data set
+
+The data for this assignment have been downloaded from the course website and have been red in R with the function "read.csv". 
+In fact, it is a comma-separated-value (CSV) file called "activity.csv" and includes 17,568 observations.
+
+The variables included in this dataset are (in brackets the original type of variable as recorded by R when loading the data):
+
+- steps (integer): Number of steps taking in a 5-minute interval, missing values are coded as NA);
+- date (factor): The date on which the measurement was taken in YYYY-MM-DD format;
+- interval (integer): Identifier for the 5-minute interval in which measurement was taken.
+
+The following code is needed to load the data.
+
+
+```{r}
+activity <- read.csv("C:/Users/flo/Dropbox/Documents/Aberystwyth PhD/coursera_HPCWales/reproresearch/peer_ass1/activity.csv")
+```
+
+
+
+
+## 1. What is mean total number of steps taken per day?
+
+The first part of the assignment consinsts in calculating the total number of steps taken per day (in answering this question it has been requested to ignore missing values in the dataset), and producing a histogram of the total number of steps taken each day.
+
+
+```{r}
+library("dplyr")
+daily_activity <- activity %>% group_by(date) %>% summarise( total_steps = sum(steps, na.rm=T) )
+```
+
+
+```{r xtable, results='asis'}
+library("xtable")
+table1 <- xtable(daily_activity)
+print(table1, type="html")
+```
+
+
+
+
+```{r }
+library("ggplot2")
+plot1 <- ggplot(daily_activity, aes(date, total_steps)) + geom_histogram(stat="identity")+ theme(axis.text.x= element_text(size=6, angle=90, vjust=1))
+print(plot1)
+```
+
+
+The following task is to calculate and report the mean and median of the total number of steps taken per day.
+
+
+```{r results='asis'}
+library("dplyr")
+daily_activity2 <- activity %>% group_by(date) %>% summarise( mean_steps = mean(steps, na.rm=T))
+daily_activity3 <- activity %>% group_by(date) %>% summarise( median_steps = median(steps, na.rm=T))
+daily_activity4 <- merge (daily_activity2, daily_activity3)
+
+library("xtable")
+table2 <- xtable(daily_activity4)
+print(table2, type="html")
+```
+
+
+
+
+## 2. What is the average daily activity pattern?
+
+The following plot is time series plot of the 5-minute interval and the average number of steps taken, averaged across all days.
+
+
+```{r results='asis'}
+activity$interval<-as.factor(activity$interval)
+min_activity <- tapply(activity$steps, activity$interval, mean, na.rm=T, simplify=F )
+plot2 <- plot(rownames(min_activity), min_activity, type="l", xlab="time", ylab="mean_steps")
+max_value <- max(as.numeric(min_activity))
+```
+
+
+The 5-minute interval (on average across all the days) that contains the maximum number of steps is at **8:35** with a mean number of steps of **`r max_value`**.
+
+
+
+### Dealing with missing values
+
+There are a number of days/intervals where there are missing values (coded as NA) and this may introduce bias into calculations, therefore I calculated and reported the total number of missing values in the dataset in order to devise a strategy for filling in all of the missing values in the dataset and reduce the bias. 
+
+
+```{r}
+missing_values<-summary(is.na(activity) )
+as.table(missing_values)
+```
+
+As the results showed there are 2304 (the "TRUEs") missing values in the "steps" variable.
+
+The strategy chosen to fill the missing values consisted in substituting the missing values with the mean for that 5-minute interval and creating a new dataset equal to the original one but with the missing data filled in.
+
+
+```{r}
+activity_fill <- activity
+activity_fill$steps[which(is.na(activity_fill$steps))] <- tapply(activity_fill$steps, activity_fill$interval, mean, na.rm=T, simplify=F )
+activity_fill$steps <- as.vector(activity_fill$steps, mode="numeric")
+```
+
+
+
+
+## 3. After filling in the missing values, what is the total number of steps per day? And the mean and median?
+
+The histogram shows the total number of steps taken each day after filling in the missing values. 
+
+
+```{r}
+library("dplyr")
+daily_activity_fill <- activity_fill %>% group_by(date) %>% summarise( total_steps = sum(steps, na.rm=T) )
+```
+
+
+```{r }
+library("ggplot2")
+plot3 <- ggplot(daily_activity_fill, aes(date, total_steps)) + geom_histogram(stat="identity")+ theme(axis.text.x= element_text(size=6, angle=90, vjust=1))
+print(plot3)
+```
+
+
+The table reports the mean and median total number of steps taken per day after filling in the missing values.
+
+
+```{r results='asis'}
+library("dplyr")
+daily_activity5 <- activity_fill %>% group_by(date) %>% summarise( mean_steps = mean(steps, na.rm=T))
+daily_activity6 <- activity_fill %>% group_by(date) %>% summarise( median_steps = median(steps, na.rm=T))
+daily_activity7 <- merge (daily_activity5, daily_activity6)
+
+library("xtable")
+table3 <- xtable(daily_activity7)
+print(table3, type="html")
+```
+
+
+
+
+**Do the values differ from the first estimates? What is the impact of imputing missing data on the estimates of the total daily number of steps?**
+
+
+The missing values are represented by 8 entire days of missing data, so the impact of filling in the missing values is restricted to those 8 days.
+
+The histogram appears the same but now, after filling the values, there are also the 8 missing days with a total number of steps of **10766,19**. 
+The mean and the median number of steps for these days (also these values are the same for all the 8 days due to the methodology used to fill in the values) are, respectively, **37.38** and **34.11**.
+
+Overall, the impact of filling in the missing values, in this case and with this methodology, is not high. The most relevant difference between days with real data and the *filled* 8 days is the median, which is **0** for the real data and **37.38** for the *filled* days.
+
+
+
+
+
+## 4. Are there differences in activity patterns between weekdays and weekends?
+
+For this part the strptime() and the weekdays() functions have been used on the dataset with the filled-in missing values to transorm the date variable from factor to POSIXlt, which will allows the program to recognise the days and distinguish between *week days* and *weekend days*.
+
+A new variable has been created in the dataset (two levels: weekday; weekend_day) indicating whether a given date is a weekday or weekend day.
+After calculating the mean number of steps taken in each 5-minute interval in weekdays and weekend days, a panel plot containing a time series of the 5-minute interval and the average number of steps taken, averaged across all weekday days or weekend days, has been created. 
+
+
+```{r}
+activity_fill$date <- strptime(activity_fill$date, "%Y-%m-%d")
+activity_fill$date<-weekdays(activity_fill$date, abbreviate=T)
+activity_fill["day_type"]<-as.factor(activity_fill$day_type)
+activity_fill$day_type<- ifelse(activity_fill$date=="Mon"| activity_fill$date=="Tue"|activity_fill$date=="Wed"|activity_fill$date=="Thu"|activity_fill$date=="Fri", "weekday", "weekend_day")
+activity_fill$interval<-as.factor(activity_fill$interval)
+activity_weekday<- activity_fill[which(activity_fill$day_type=="weekday"),]
+activity_weekend_day<- activity_fill[which(activity_fill$day_type=="weekend_day"),]
+min_act_weekday <- tapply(activity_weekday$steps, activity_weekday$interval, mean, na.rm=T, simplify=F )
+min_act_weekend_day <- tapply(activity_weekend_day$steps, activity_weekend_day$interval, mean, na.rm=T, simplify=F )
+min_act_weekday<-as.data.frame(min_act_weekday)
+min_act_weekend_day<-as.data.frame(min_act_weekend_day)
+min_act_weekday["day_type"]<-as.factor(min_act_weekday$day_type)
+min_act_weekend_day["day_type"]<-as.factor(min_act_weekend_day$day_type)
+min_act_weekday["interval"]<-rownames(min_act_weekday)
+min_act_weekend_day["interval"]<-rownames(min_act_weekend_day)
+min_act_weekday$day_type<- "weekday"
+min_act_weekend_day$day_type<- "weekend_day"
+colnames(min_act_weekday)<-c("mean_steps","day_type", "interval")
+colnames(min_act_weekend_day)<-c("mean_steps","day_type", "interval")
+min_act<-rbind(min_act_weekday, min_act_weekend_day)
+min_act$mean_steps<-as.vector(min_act$mean_steps, mode="numeric")
+```
+
+
+```{r}
+library("ggplot2")
+plot4 <- ggplot(min_act, aes(interval, mean_steps, group=1)) + geom_line() +facet_grid(day_type~.)
+print(plot4)
+```
+
+
+The pattern of the graphs seems similar between weekdays and weekend days, however there are some differences in some hours of the day. In particular, it seems that in the morning the mean number of steps is higher during weekends, while at night is higher during week days.
