@@ -212,3 +212,11 @@ print(plot4)
 
 
 The pattern of the graphs seems similar between weekdays and weekend days, however there are some differences in some hours of the day. In particular, it seems that in the morning the mean number of steps is higher during weekends, while at night is higher during week days.
+
+
+```{r}
+knit2html("PA1_template.Rmd")
+```
+
+
+
